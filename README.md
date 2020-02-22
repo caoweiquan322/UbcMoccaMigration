@@ -1,4 +1,4 @@
-# UBC MOCCA Migration Project
+# UBC MOCCA Migration Project (Still in Progress)
 
 This project is meant to migrate core components and datasets of the C++ based UBC MOCCA software, which is called (TerrainRLSim)[https://github.com/UBCMOCCA/TerrainRLSim], into Gym. Thus this useful tool would be much easier to use, and potentially attract even more researchers join it.
 

@@ -1,4 +1,5 @@
 .idea/
+dev/
 *~
 *.bak
 .python-version
