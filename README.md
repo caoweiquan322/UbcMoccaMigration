@@ -17,3 +17,13 @@ N./A.
 * Being able to access motion state, e.g. position, quaternion, velocity etc., of every body part and end effector easily.
 * Creating learning tasks (or known as **env**) with Gym manner.
 * Creating RL learning nets, or reusing open source implementations such as (OpenAI)[https://openai.github.io] and DeepMind.
+
+## Python version&requirements
+
+Python version 3.6+ is recommended.
+
+Besides the requirements declared in **requirements.txt**, some external packages are required.
+
+* (gym)[https://github.com/openai/gym]
+* (mujoco-py)[https://github.com/openai/mujoco-py]
+* (baselines)[https://github.com/openai/baselines]
