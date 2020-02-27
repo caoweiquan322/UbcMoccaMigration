@@ -6,11 +6,18 @@ This project is meant to migrate core components and datasets of the C++ based U
 
 ### Done
 
-N./A.
+* Converted MOCCA character (JSON format) into (mujoco)[http://www.mujoco.org] **MJCF** format.
+
+### TODO by now
+
+* Solve the skybox issue for [0 -9.81 0] world.
+* Adjust the camera in a better way.
+* Handle joint limits/range.
+* Add terrain data.
+* Load and play motion data.
 
 ### In progress
 
-* Converting MOCCA character (JSON format) into (mujoco)[http://www.mujoco.org] **MJCF** format.
 * Converting MOCCA terrain (JSON format) into mujoco format.
 * Parsing MOCCA motion files with python.
 * Play motion data with mujoco based environment.

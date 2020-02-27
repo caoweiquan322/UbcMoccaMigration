@@ -26,7 +26,7 @@ class EleTag(Enum):
     site = 4
     mesh = 5
     skin = 6
-    height_field=7
+    hfield=7
     texture = 8
     material = 9
     camera = 10
@@ -237,27 +237,27 @@ class BoxSite(Site):
 
 class Mesh(Element):
     def __init__(self, name='__rename_this__'):
-        super(Mesh, self).__init__(tag = EleTag.mesh, name=name)
+        super(Mesh, self).__init__(tag=EleTag.mesh, name=name)
 
 
 class Skin(Element):
     def __init__(self, name='__rename_this__'):
-        super(Skin, self).__init__(tag = EleTag.skin, name=name)
+        super(Skin, self).__init__(tag=EleTag.skin, name=name)
         raise NotImplementedError()
 
 
 class HeightField(Element):
     def __init__(self, name='__rename_this__'):
-        super(HeightField, self).__init__(tag = EleTag.height_field, name=name)
+        super(HeightField, self).__init__(tag=EleTag.hfield, name=name)
 
 
 class Texture(Element):
     def __init__(self, name='__rename_this__'):
-        super(Texture, self).__init__(tag = EleTag.texture, name=name)
+        super(Texture, self).__init__(tag=EleTag.texture, name=name)
 
 
 class Material(Element):
     def __init__(self, name='__rename_this__'):
-        super(Material, self).__init__(tag = EleTag.material, name=name)
+        super(Material, self).__init__(tag=EleTag.material, name=name)
 
 
