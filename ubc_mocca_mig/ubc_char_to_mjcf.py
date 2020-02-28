@@ -6,11 +6,14 @@ Copyright (c) 2018 Topcoder Inc. All Rights Reserved.
 @author: TCSCODER
 """
 import json
+import xml.dom.minidom as minidom
+import math
+
 import numpy as np
-from ubc_mocca_mig.ubc_character import Joint as UbcJoint
+
 from ubc_mocca_mig.ubc_character import Body as UbcBody
 from ubc_mocca_mig.ubc_character import DrawShape as UbcDrawShape
-import xml.dom.minidom as minidom
+from ubc_mocca_mig.ubc_character import Joint as UbcJoint
 
 
 def add_joints_to_body(ubc_joint: UbcJoint, mjcf_body, xml_doc):
@@ -22,6 +25,10 @@ def add_joints_to_body(ubc_joint: UbcJoint, mjcf_body, xml_doc):
     mjcf_body.setAttribute('euler', '%.5f %.5f %.5f' % (ubc_joint.AttachThetaX, ubc_joint.AttachThetaY,
                                                         ubc_joint.AttachThetaZ))
     if ubc_joint.is_root() and ubc_j_type == 'none':  # Free
+        assert math.fabs(ubc_joint.AttachThetaX) < 1e-5 and \
+               math.fabs(ubc_joint.AttachThetaY) < 1e-5 and \
+               math.fabs(ubc_joint.AttachThetaZ) < 1e-5, 'rotation matrix of root joint must be I'
+        mjcf_body.setAttribute('euler', '%.5f 0 0' % (math.pi/2))
         mjcf_joint = xml_doc.createElement('joint')
         mjcf_joint.setAttribute('type', 'free')
         mjcf_joints_to_add.append(mjcf_joint)
@@ -41,6 +48,10 @@ def add_joints_to_body(ubc_joint: UbcJoint, mjcf_body, xml_doc):
         mjcf_joints_to_add.append(mjcf_joint)
     elif ubc_j_type == 'planar':  # Slide*2 + Hinge*1
         assert ubc_joint.is_root(), 'planar joint must be root joint'
+        assert math.fabs(ubc_joint.AttachThetaX) < 1e-5 and\
+               math.fabs(ubc_joint.AttachThetaY) < 1e-5 and\
+               math.fabs(ubc_joint.AttachThetaZ) < 1e-5, 'rotation matrix of root joint must be I'
+        mjcf_body.setAttribute('euler', '%.5f 0 0' % (math.pi / 2))
         # Slide X
         mjcf_joint = xml_doc.createElement('joint')
         mjcf_joint.setAttribute('type', 'slide')
@@ -76,19 +87,20 @@ def add_geom_to_body(ubc_body: UbcBody, mjcf_body, xml_doc):
                            '%.5f %.5f %.5f' % (ubc_body.AttachThetaX, ubc_body.AttachThetaY, ubc_body.AttachThetaZ))
     ubc_shape = ubc_body.Shape
     if ubc_shape == 'sphere':
-        mjcf_geom.setAttribute('size', '%.5f' % (ubc_body.Param0/2))
+        mjcf_geom.setAttribute('size', '%.5f' % (ubc_body.Param0 / 2))
     elif ubc_shape == 'box':
-        mjcf_geom.setAttribute('size', '%.5f %.5f %.5f' % (ubc_body.Param0/2, ubc_body.Param1/2, ubc_body.Param2/2))
+        mjcf_geom.setAttribute('size',
+                               '%.5f %.5f %.5f' % (ubc_body.Param0 / 2, ubc_body.Param1 / 2, ubc_body.Param2 / 2))
     elif ubc_shape == 'capsule':
-        mjcf_geom.setAttribute('size', '%.5f %.5f' % (ubc_body.Param0/2, ubc_body.Param1/2))
+        mjcf_geom.setAttribute('size', '%.5f %.5f' % (ubc_body.Param0 / 2, ubc_body.Param1 / 2))
         # UBC capsule is in [0,1,0] direction, while MJCF capsule is in [0,0,1] direction.
         # So we need use rotation matrix: R' = R*rot_x(-pi/2).
         # Since we have R = rot_z(z)*rot_y(y)*rot_x(x) under UBC notation, thus R' = rot_z(z)*rot_y(y)*rot_x(x-pi/2).
         mjcf_geom.setAttribute('euler',
-                               '%.5f %.5f %.5f' % (ubc_body.AttachThetaX-np.pi/2,
+                               '%.5f %.5f %.5f' % (ubc_body.AttachThetaX - np.pi / 2,
                                                    ubc_body.AttachThetaY, ubc_body.AttachThetaZ))
     elif ubc_shape == 'cylinder':
-        mjcf_geom.setAttribute('size', '%.5f %.5f' % (ubc_body.Param0/2, ubc_body.Param1/2))
+        mjcf_geom.setAttribute('size', '%.5f %.5f' % (ubc_body.Param0 / 2, ubc_body.Param1 / 2))
         mjcf_geom.setAttribute('euler',
                                '%.5f %.5f %.5f' % (ubc_body.AttachThetaX - np.pi / 2,
                                                    ubc_body.AttachThetaY, ubc_body.AttachThetaZ))
@@ -121,29 +133,73 @@ def dump_kinematic_tree_as_mjcf(root_ubc_joint: UbcJoint, curr_mjcf_body, xml_do
         dump_kinematic_tree_as_mjcf(child_mjcf_joint, mjcf_body, xml_doc)
 
 
+DEFAULT_MJCF_OPTION = """
+    <option gravity="0 0 -9.81"/>
+"""
+DEFAULT_MJCF_COMPILER = """
+    <compiler angle="radian" coordinate="local" eulerseq="XYZ"/>
+"""
+DEFAULT_MJCF_ASSET = """
+    <asset>
+        <texture type="skybox" builtin="gradient" rgb1="1 1 1" rgb2=".6 .8 1"
+                 width="256" height="256"/>
+        <texture name="texgeom" type="cube" builtin="flat" mark="cross" width="127" height="1278"
+            rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" markrgb="1 1 1" random="0.01"/>
+        <texture name="texplane" type="2d" builtin="checker" rgb1=".2 .3 .4" rgb2=".1 0.15 0.2"
+            width="512" height="512"/>
+
+        <material name='MatPlane' reflectance='0.3' texture="texplane" texrepeat="1 1" texuniform="true"/>
+        <material name='geom' texture="texgeom" texuniform="true"/>
+    </asset>
+"""
+DEFAULT_MJCF_VISUAL = """
+    <visual>
+        <map fogstart="3" fogend="5" force="0.1" znear="0.5"/>
+        <quality shadowsize="2048" offsamples="8"/>
+        <global offwidth="800" offheight="800"/>
+    </visual>
+"""
+DEFAULT_MJCF_PLANE = """
+<geom type="plane" size="3 1 0.1" material="MatPlane" rgba="0.8 1 0.6 1" euler="0 0 0" pos="0 0 -1"/>
+"""
+
+
+def easy_append_xml_text(mjcf_parent, xml_text: str):
+    xml_text = xml_text.replace('\n', '')
+    mjcf_child = minidom.parseString(xml_text).documentElement
+    mjcf_parent.appendChild(mjcf_child)
+
+
 def save_ubc_kinematic_as_mjcf(root_ubc_joint: UbcJoint, file_path: str):
     assert file_path is not None and len(file_path.strip()) > 0, 'file_path could not be empty'
     # The root mujoco
     xml_doc = minidom.getDOMImplementation().createDocument(None, 'mujoco', None)
     mjcf_root = xml_doc.documentElement
     # The option.
-    mjcf_option = xml_doc.createElement('option')
-    mjcf_option.setAttribute('gravity', '0 -9.81 0')
-    mjcf_root.appendChild(mjcf_option)
+    easy_append_xml_text(mjcf_root, DEFAULT_MJCF_OPTION)
+    # mjcf_option = xml_doc.createElement('option')
+    # mjcf_option.setAttribute('gravity', '0 -9.81 0')
+    # mjcf_root.appendChild(mjcf_option)
     # The compiler
-    mjcf_compiler = xml_doc.createElement('compiler')
-    mjcf_compiler.setAttribute('coordinate', 'local')
-    mjcf_compiler.setAttribute('angle', 'radian')  # Default: degree
-    mjcf_compiler.setAttribute('eulerseq', 'XYZ')  # Default: xyz
-    mjcf_root.appendChild(mjcf_compiler)
+    easy_append_xml_text(mjcf_root, DEFAULT_MJCF_COMPILER)
+    # mjcf_compiler = xml_doc.createElement('compiler')
+    # mjcf_compiler.setAttribute('coordinate', 'local')
+    # mjcf_compiler.setAttribute('angle', 'radian')  # Default: degree
+    # mjcf_compiler.setAttribute('eulerseq', 'XYZ')  # Default: xyz
+    # mjcf_root.appendChild(mjcf_compiler)
+    # Asset and visual.
+    easy_append_xml_text(mjcf_root, DEFAULT_MJCF_ASSET)
+    easy_append_xml_text(mjcf_root, DEFAULT_MJCF_VISUAL)
     # The world body
     mjcf_world_body = xml_doc.createElement('worldbody')
     mjcf_root.appendChild(mjcf_world_body)
     # The world_body/camera.
-    mjcf_camera = xml_doc.createElement('camera')
-    mjcf_camera.setAttribute('pos', '0 0.5 5')
-    mjcf_camera.setAttribute('fovy', '90')
-    mjcf_world_body.appendChild(mjcf_camera)
+    # mjcf_camera = xml_doc.createElement('camera')
+    # mjcf_camera.setAttribute('pos', '0 0.5 5')
+    # mjcf_camera.setAttribute('fovy', '90')
+    # mjcf_world_body.appendChild(mjcf_camera)
+    # The plane
+    easy_append_xml_text(mjcf_world_body, DEFAULT_MJCF_PLANE)
     # The bodies
     dump_kinematic_tree_as_mjcf(root_ubc_joint, mjcf_world_body, xml_doc)
     # Write file.
@@ -233,7 +289,7 @@ def parse_ubc_character_kinematic(file_path: str) -> UbcJoint:
 def main():
     file_path = '../data/UbcMocca/characters/biped3d_full_mocap.txt'
     # file_path = '/Users/fatty/TfDyn/xbpeng/DeepMimic/data/characters/humanoid3d.txt'
-    file_path = '../data/UbcMocca/characters/goat.txt'
+    # file_path = '../data/UbcMocca/characters/goat.txt'
     root_ubc_joint = parse_ubc_character_kinematic(file_path)
     save_ubc_kinematic_as_mjcf(root_ubc_joint, '../dev/cvt_example.xml')
 

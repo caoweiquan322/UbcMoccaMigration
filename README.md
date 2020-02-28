@@ -10,8 +10,6 @@ This project is meant to migrate core components and datasets of the C++ based U
 
 ### TODO by now
 
-* Solve the skybox issue for [0 -9.81 0] world.
-* Adjust the camera in a better way.
 * Handle joint limits/range.
 * Add terrain data.
 * Load and play motion data.
